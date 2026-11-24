@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contextboss"
+version = "0.1.0"
+description = "Master the context window, don't fight it. Dynamic token budgeting, priority-based context injection, memory + retrieval + tool allocation."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = ["tiktoken>=0.5"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+contextboss = "contextboss.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
