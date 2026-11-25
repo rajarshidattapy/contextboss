@@ -15,7 +15,7 @@ stays out, and tells you why. The result never exceeds the window.
 ## Quickstart
 
 ```bash
-pip install -e .
+pip install -e packages/contextboss-core
 contextboss                 # live demo: what got in, what got dropped, why
 contextboss --budget 400    # squeeze it and watch the tiers fight
 contextboss --show          # also print the final assembled prompt
@@ -112,3 +112,38 @@ python scripts/make_screenshot.py   # regenerate docs/demo.png (needs Chrome)
 ```
 
 MIT
+
+## Persistent context
+
+New in 0.2: `ContextManager` adds durable storage around the assembler. Entries carry
+namespaces, tags, provenance, pinned flags and full version history, live in SQLite
+(WAL + FTS5 search), and deletion is real deletion: the entry, its index rows and its
+history all go.
+
+```python
+from contextboss import ContextManager
+
+mgr = ContextManager("context.db")          # or ":memory:"
+mgr.add("Staging deploys freeze on Fridays", tags=["deploy"], provenance="slack:#eng")
+mgr.add("User is on the Pro plan since Oct 2", pinned=True, importance=2.0)
+
+ctx = mgr.assemble("deploy freeze", system="You are a careful support engineer.",
+                   task="Why did the Friday deploy fail?", budget=8000)
+print(ctx.render())                          # never exceeds the window
+mgr.compact(entry_id, target_tokens=100)     # shrink, keeping version history
+mgr.delete(entry_id)                         # gone for good
+```
+
+## Repository layout
+
+```
+packages/contextboss-core   the engine: assembly, budgeting, storage, manager
+docs/                       images and design docs
+```
+
+The PyPI distribution is `contextboss-core`; the import package stays `contextboss`,
+so existing code keeps working.
+
+## Architecture
+
+<p align="center"><img src="docs/architecture.jpg" alt="ContextBoss architecture" width="860"></p>

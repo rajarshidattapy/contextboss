@@ -3,11 +3,11 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "contextboss"
-version = "0.1.0"
-description = "Master the context window, don't fight it. Dynamic token budgeting, priority-based context injection, memory + retrieval + tool allocation."
+name = "contextboss-core"
+version = "0.2.0"
+description = "Master the context window, don't fight it. Persistent context storage, dynamic token budgeting, priority-based assembly, memory + retrieval + tool allocation."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = ["tiktoken>=0.5"]
 
