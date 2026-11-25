@@ -15,10 +15,11 @@ from .manager import ContextManager
 
 def _manager(args: argparse.Namespace) -> ContextManager:
     settings = load_settings()
-    db = args.db or settings.db
+    db = getattr(args, "db", None) or settings.db
     return ContextManager(
-        db, budget=args.budget or settings.budget,
-        output_reserve=args.reserve or settings.reserve,
+        db,
+        budget=getattr(args, "budget", None) or settings.budget,
+        output_reserve=getattr(args, "reserve", None) or settings.reserve,
     )
 
 
@@ -69,6 +70,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     asm = sub.add_parser("assemble", help="build a window-safe prompt")
     asm.add_argument("query", nargs="?", default="")
+    asm.add_argument("--budget", type=int, default=None)
+    asm.add_argument("--reserve", type=int, default=None)
     asm.add_argument("--system")
     asm.add_argument("--task")
     asm.add_argument("--namespace")
