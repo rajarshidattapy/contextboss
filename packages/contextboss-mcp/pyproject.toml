@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contextboss-mcp"
+version = "0.2.0"
+description = "MCP server for ContextBoss: persistent context management over the Model Context Protocol."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = ["contextboss-core", "mcp>=1.12,<2"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+contextboss-mcp = "contextboss_mcp.server:main"
+contextboss-hook = "contextboss_mcp.hooks:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

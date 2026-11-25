@@ -1,0 +1,8 @@
+{
+  "name": "contextboss",
+  "version": "0.2.0",
+  "description": "Persistent context management for Claude Code via the ContextBoss MCP server: session snapshots, context injection, token-budgeted assembly.",
+  "mcpServers": {
+    "contextboss": { "command": "contextboss-mcp" }
+  }
+}

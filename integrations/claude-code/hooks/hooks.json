@@ -1,0 +1,14 @@
+{
+  "description": "ContextBoss hooks: inject stored context at session start, snapshot sessions before compaction and at stop. Snapshots are ContextBoss's own entries; provider conversation history is never modified.",
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "contextboss-hook session-start" } ] }
+    ],
+    "PreCompact": [
+      { "hooks": [ { "type": "command", "command": "contextboss-hook snapshot" } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "contextboss-hook snapshot" } ] }
+    ]
+  }
+}
