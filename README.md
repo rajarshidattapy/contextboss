@@ -3,6 +3,26 @@
 <p align="center"><b>Master the context window, don't fight it.</b><br>
 Dynamic token budgeting, priority-based context injection, memory + retrieval + tool allocation.</p>
 
+## Run it
+
+```bash
+# MCP for Claude Code / Desktop / Codex
+pip install contextboss-mcp        # then: contextboss-mcp  (stdio)
+contextboss-mcp serve --http       # streamable HTTP for Claude Web / ChatGPT
+
+# REST API + dashboard
+pip install contextboss-api
+contextboss-api                    # http://127.0.0.1:8787
+cd apps/dashboard && npm install && npm run dev
+
+# Or one container
+docker compose up                  # API on 127.0.0.1:8787
+```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit and
+[docs/benchmarks.md](docs/benchmarks.md) for measured results.
+
+
 <p align="center"><img src="docs/demo.png" alt="contextboss demo run" width="860"></p>
 
 Most agents stuff everything into the prompt and pray. Then the window fills up, something

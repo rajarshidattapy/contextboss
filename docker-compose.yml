@@ -1,0 +1,28 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      CONTEXTBOSS_DB: /data/contextboss.db
+      # Comma-separated bearer keys for the REST API and MCP HTTP transport.
+      CONTEXTBOSS_API_KEYS: ${CONTEXTBOSS_API_KEYS:-}
+    volumes:
+      - contextboss-data:/data
+    ports:
+      - "127.0.0.1:8787:8787"
+
+  # Optional HTTPS front via Caddy. Put your domain in Caddyfile first.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    profiles: ["https"]
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+volumes:
+  contextboss-data:
+  caddy-data:

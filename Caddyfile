@@ -1,0 +1,6 @@
+# Replace with your domain. Caddy handles TLS certificates automatically.
+# Serves the MCP streamable-HTTP transport (Claude Web / ChatGPT connectors)
+# and the REST API over HTTPS.
+ctx.example.com {
+    reverse_proxy api:8787
+}
