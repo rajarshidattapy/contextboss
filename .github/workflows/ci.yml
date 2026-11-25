@@ -14,7 +14,7 @@ jobs:
       - run: pip install -e "packages/contextboss-core[dev]" -e "packages/contextboss-mcp[dev]"
       - run: ruff check packages
       - run: python -m mypy packages/contextboss-core/src/contextboss
-      - run: python -m pytest packages/contextboss-core packages/contextboss-mcp -q
+      - run: python -m pytest packages/contextboss-core packages/contextboss-mcp bench -q
       - name: reproducible build + wheel smoke test
         run: |
           python -m build packages/contextboss-core
