@@ -9,14 +9,14 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from contextboss import ContextManager
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("contextboss")
 
-_manager: Optional[ContextManager] = None
+_manager: ContextManager | None = None
 
 
 def get_manager() -> ContextManager:
@@ -43,7 +43,7 @@ def _entry_json(e: Any) -> str:
 def context_add(
     content: str,
     namespace: str = "default",
-    tags: Optional[List[str]] = None,
+    tags: list[str] | None = None,
     provenance: str = "",
     tier: str = "memory",
     pinned: bool = False,
@@ -61,8 +61,8 @@ def context_add(
 @mcp.tool()
 def context_search(
     query: str = "",
-    namespace: Optional[str] = None,
-    tags: Optional[List[str]] = None,
+    namespace: str | None = None,
+    tags: list[str] | None = None,
     limit: int = 10,
 ) -> str:
     """Full-text search over stored context, ranked by relevance. Filters:
@@ -83,13 +83,13 @@ def context_get(entry_id: str) -> str:
 @mcp.tool()
 def context_update(
     entry_id: str,
-    content: Optional[str] = None,
-    namespace: Optional[str] = None,
-    tags: Optional[List[str]] = None,
-    provenance: Optional[str] = None,
-    tier: Optional[str] = None,
-    pinned: Optional[bool] = None,
-    importance: Optional[float] = None,
+    content: str | None = None,
+    namespace: str | None = None,
+    tags: list[str] | None = None,
+    provenance: str | None = None,
+    tier: str | None = None,
+    pinned: bool | None = None,
+    importance: float | None = None,
 ) -> str:
     """Update an entry. Bumps its version; the old version stays in history."""
     try:
@@ -110,7 +110,7 @@ def context_delete(entry_id: str) -> str:
 
 
 @mcp.tool()
-def context_compact(entry_id: str, target_tokens: Optional[int] = None) -> str:
+def context_compact(entry_id: str, target_tokens: int | None = None) -> str:
     """Summarize an entry down to target_tokens (default: half its size),
     keeping version history. Returns the updated entry."""
     try:
@@ -123,11 +123,11 @@ def context_compact(entry_id: str, target_tokens: Optional[int] = None) -> str:
 @mcp.tool()
 def context_assemble(
     query: str = "",
-    system: Optional[str] = None,
-    task: Optional[str] = None,
-    namespace: Optional[str] = None,
-    budget: Optional[int] = None,
-    output_reserve: Optional[int] = None,
+    system: str | None = None,
+    task: str | None = None,
+    namespace: str | None = None,
+    budget: int | None = None,
+    output_reserve: int | None = None,
 ) -> str:
     """Assemble a window-safe prompt from stored context. Pinned entries rank
     first; with a query, memory/retrieval entries rank by relevance. The result
@@ -168,7 +168,7 @@ def context_inspect(entry_id: str) -> str:
 
 
 @mcp.tool()
-def context_stats(namespace: Optional[str] = None) -> str:
+def context_stats(namespace: str | None = None) -> str:
     """Store statistics: entry/token counts, pinned count, per-namespace and
     per-tier breakdowns."""
     return json.dumps(get_manager().stats(namespace=namespace), indent=2)

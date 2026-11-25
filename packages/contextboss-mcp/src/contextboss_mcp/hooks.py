@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from typing import Any, Dict
+from typing import Any
 
 from contextboss import ContextManager
 
@@ -23,7 +23,7 @@ def _manager() -> ContextManager:
     return ContextManager(db)
 
 
-def _read_event() -> Dict[str, Any]:
+def _read_event() -> dict[str, Any]:
     try:
         raw = sys.stdin.read()
         return json.loads(raw) if raw.strip() else {}
@@ -36,7 +36,6 @@ def session_start() -> int:
 
     Prints the SessionStart hook JSON with additionalContext on stdout.
     """
-    event = _read_event()
     mgr = _manager()
     entries = mgr.list(limit=8)
     lines = [
@@ -73,7 +72,7 @@ def snapshot() -> int:
     transcript = event.get("transcript_path")
     if transcript and os.path.isfile(transcript):
         try:
-            with open(transcript, "r", errors="replace") as fh:
+            with open(transcript, errors="replace") as fh:
                 lines = fh.readlines()[-50:]
             texts = []
             for line in lines:

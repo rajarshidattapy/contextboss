@@ -6,11 +6,13 @@ history. InMemoryBackend implements the same contract for tests and ephemeral us
 """
 from __future__ import annotations
 
+import builtins
 import json
 import sqlite3
 import threading
 import time
-from typing import Any, Dict, List, Optional, Protocol, Sequence, runtime_checkable
+from collections.abc import Sequence
+from typing import Any, Protocol, runtime_checkable
 
 from .models import ContextEntry
 
@@ -18,27 +20,27 @@ from .models import ContextEntry
 @runtime_checkable
 class StorageBackend(Protocol):
     def add(self, entry: ContextEntry) -> ContextEntry: ...
-    def get(self, entry_id: str) -> Optional[ContextEntry]: ...
+    def get(self, entry_id: str) -> ContextEntry | None: ...
     def update(self, entry: ContextEntry) -> ContextEntry: ...
     def delete(self, entry_id: str) -> bool: ...
     def search(
         self,
         query: str,
         *,
-        namespace: Optional[str] = None,
-        tags: Optional[Sequence[str]] = None,
+        namespace: str | None = None,
+        tags: Sequence[str] | None = None,
         limit: int = 10,
-    ) -> List[ContextEntry]: ...
+    ) -> builtins.list[ContextEntry]: ...
     def list(
         self,
         *,
-        namespace: Optional[str] = None,
-        tags: Optional[Sequence[str]] = None,
+        namespace: str | None = None,
+        tags: Sequence[str] | None = None,
         limit: int = 1000,
-    ) -> List[ContextEntry]: ...
-    def get_version(self, entry_id: str, version: int) -> Optional[ContextEntry]: ...
-    def list_versions(self, entry_id: str) -> List[int]: ...
-    def stats(self, *, namespace: Optional[str] = None) -> Dict[str, Any]: ...
+    ) -> builtins.list[ContextEntry]: ...
+    def get_version(self, entry_id: str, version: int) -> ContextEntry | None: ...
+    def list_versions(self, entry_id: str) -> builtins.list[int]: ...
+    def stats(self, *, namespace: str | None = None) -> dict[str, Any]: ...
     def close(self) -> None: ...
 
 
@@ -119,7 +121,7 @@ class SQLiteBackend:
     _COLS = "id, namespace, content, tags, provenance, tier, pinned, importance, version, created_at, updated_at, tokens, metadata"
 
     @staticmethod
-    def _tags_match(entry_tags: List[str], wanted: Optional[Sequence[str]]) -> bool:
+    def _tags_match(entry_tags: builtins.list[str], wanted: Sequence[str] | None) -> bool:
         return not wanted or all(t in entry_tags for t in wanted)
 
     # -- writes -------------------------------------------------------------
@@ -193,7 +195,7 @@ class SQLiteBackend:
         return True
 
     # -- reads --------------------------------------------------------------
-    def get(self, entry_id: str) -> Optional[ContextEntry]:
+    def get(self, entry_id: str) -> ContextEntry | None:
         with self._lock:
             row = self._db.execute(
                 f"SELECT {self._COLS} FROM entries WHERE id = ?", (entry_id,)
@@ -204,10 +206,10 @@ class SQLiteBackend:
         self,
         query: str,
         *,
-        namespace: Optional[str] = None,
-        tags: Optional[Sequence[str]] = None,
+        namespace: str | None = None,
+        tags: Sequence[str] | None = None,
         limit: int = 10,
-    ) -> List[ContextEntry]:
+    ) -> builtins.list[ContextEntry]:
         if not query.strip():
             return self.list(namespace=namespace, tags=tags, limit=limit)
         with self._lock:
@@ -218,7 +220,7 @@ class SQLiteBackend:
                         " JOIN entries_fts f ON f.entry_id = e.id"
                         " WHERE entries_fts MATCH ?"
                     )
-                    params: List[Any] = [query]
+                    params: list[Any] = [query]
                     if namespace is not None:
                         sql += " AND e.namespace = ?"
                         params.append(namespace)
@@ -233,10 +235,10 @@ class SQLiteBackend:
         out = [e for e in entries if self._tags_match(e.tags, tags)]
         return out[:limit]
 
-    def _like_search(self, query: str, namespace: Optional[str]) -> List[tuple]:
+    def _like_search(self, query: str, namespace: str | None) -> builtins.list[tuple]:
         terms = [t.lower() for t in query.split() if t.strip()]
         sql = f"SELECT {self._COLS} FROM entries"
-        params: List[Any] = []
+        params: list[Any] = []
         if namespace is not None:
             sql += " WHERE namespace = ?"
             params.append(namespace)
@@ -251,12 +253,12 @@ class SQLiteBackend:
     def list(
         self,
         *,
-        namespace: Optional[str] = None,
-        tags: Optional[Sequence[str]] = None,
+        namespace: str | None = None,
+        tags: Sequence[str] | None = None,
         limit: int = 1000,
-    ) -> List[ContextEntry]:
+    ) -> builtins.list[ContextEntry]:
         sql = f"SELECT {self._COLS} FROM entries"
-        params: List[Any] = []
+        params: list[Any] = []
         if namespace is not None:
             sql += " WHERE namespace = ?"
             params.append(namespace)
@@ -267,7 +269,7 @@ class SQLiteBackend:
         entries = [self._row_to_entry(r) for r in rows]
         return [e for e in entries if self._tags_match(e.tags, tags)]
 
-    def get_version(self, entry_id: str, version: int) -> Optional[ContextEntry]:
+    def get_version(self, entry_id: str, version: int) -> ContextEntry | None:
         current = self.get(entry_id)
         if current is None:
             return None
@@ -289,7 +291,7 @@ class SQLiteBackend:
             created_at=current.created_at, tokens=row[3],
         )
 
-    def list_versions(self, entry_id: str) -> List[int]:
+    def list_versions(self, entry_id: str) -> builtins.list[int]:
         with self._lock:
             old = [
                 r[0]
@@ -301,16 +303,16 @@ class SQLiteBackend:
         cur = self.get(entry_id)
         return old + ([cur.version] if cur else [])
 
-    def stats(self, *, namespace: Optional[str] = None) -> Dict[str, Any]:
+    def stats(self, *, namespace: str | None = None) -> dict[str, Any]:
         sql = "SELECT namespace, tier, pinned, tokens FROM entries"
-        params: List[Any] = []
+        params: list[Any] = []
         if namespace is not None:
             sql += " WHERE namespace = ?"
             params.append(namespace)
         with self._lock:
             rows = self._db.execute(sql, params).fetchall()
-        by_ns: Dict[str, Dict[str, int]] = {}
-        by_tier: Dict[str, Dict[str, int]] = {}
+        by_ns: dict[str, dict[str, int]] = {}
+        by_tier: dict[str, dict[str, int]] = {}
         total_tokens = 0
         pinned = 0
         for ns, tier, pin, tokens in rows:
@@ -344,8 +346,8 @@ class InMemoryBackend:
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
-        self._entries: Dict[str, ContextEntry] = {}
-        self._versions: Dict[str, Dict[int, ContextEntry]] = {}
+        self._entries: dict[str, ContextEntry] = {}
+        self._versions: dict[str, dict[int, ContextEntry]] = {}
 
     @staticmethod
     def _copy(e: ContextEntry) -> ContextEntry:
@@ -357,7 +359,7 @@ class InMemoryBackend:
         )
 
     @staticmethod
-    def _tags_match(entry_tags: List[str], wanted: Optional[Sequence[str]]) -> bool:
+    def _tags_match(entry_tags: builtins.list[str], wanted: Sequence[str] | None) -> bool:
         return not wanted or all(t in entry_tags for t in wanted)
 
     def add(self, entry: ContextEntry) -> ContextEntry:
@@ -370,7 +372,7 @@ class InMemoryBackend:
             self._versions[entry.id] = {}
         return entry
 
-    def get(self, entry_id: str) -> Optional[ContextEntry]:
+    def get(self, entry_id: str) -> ContextEntry | None:
         with self._lock:
             e = self._entries.get(entry_id)
             return self._copy(e) if e else None
@@ -399,10 +401,10 @@ class InMemoryBackend:
         self,
         query: str,
         *,
-        namespace: Optional[str] = None,
-        tags: Optional[Sequence[str]] = None,
+        namespace: str | None = None,
+        tags: Sequence[str] | None = None,
         limit: int = 10,
-    ) -> List[ContextEntry]:
+    ) -> builtins.list[ContextEntry]:
         terms = [t.lower() for t in query.split() if t.strip()]
         with self._lock:
             candidates = list(self._entries.values())
@@ -424,10 +426,10 @@ class InMemoryBackend:
     def list(
         self,
         *,
-        namespace: Optional[str] = None,
-        tags: Optional[Sequence[str]] = None,
+        namespace: str | None = None,
+        tags: Sequence[str] | None = None,
         limit: int = 1000,
-    ) -> List[ContextEntry]:
+    ) -> builtins.list[ContextEntry]:
         with self._lock:
             entries = [
                 e
@@ -438,7 +440,7 @@ class InMemoryBackend:
         entries.sort(key=lambda e: (not e.pinned, -e.updated_at))
         return [self._copy(e) for e in entries[:limit]]
 
-    def get_version(self, entry_id: str, version: int) -> Optional[ContextEntry]:
+    def get_version(self, entry_id: str, version: int) -> ContextEntry | None:
         current = self._entries.get(entry_id)
         if current is None:
             return None
@@ -447,18 +449,18 @@ class InMemoryBackend:
         old = self._versions.get(entry_id, {}).get(version)
         return self._copy(old) if old else None
 
-    def list_versions(self, entry_id: str) -> List[int]:
+    def list_versions(self, entry_id: str) -> builtins.list[int]:
         current = self._entries.get(entry_id)
         if current is None:
             return []
         return sorted(self._versions.get(entry_id, {})) + [current.version]
 
-    def stats(self, *, namespace: Optional[str] = None) -> Dict[str, Any]:
+    def stats(self, *, namespace: str | None = None) -> dict[str, Any]:
         entries = [
             e for e in self._entries.values() if namespace is None or e.namespace == namespace
         ]
-        by_ns: Dict[str, Dict[str, int]] = {}
-        by_tier: Dict[str, Dict[str, int]] = {}
+        by_ns: dict[str, dict[str, int]] = {}
+        by_tier: dict[str, dict[str, int]] = {}
         for e in entries:
             by_ns.setdefault(e.namespace, {"entries": 0, "tokens": 0})
             by_ns[e.namespace]["entries"] += 1

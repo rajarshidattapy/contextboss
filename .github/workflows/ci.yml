@@ -11,5 +11,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e "packages/contextboss-core[dev]"
-      - run: python -m pytest packages/contextboss-core
+      - run: pip install -e "packages/contextboss-core[dev]" -e "packages/contextboss-mcp[dev]"
+      - run: ruff check packages
+      - run: python -m mypy packages/contextboss-core/src/contextboss
+      - run: python -m pytest packages/contextboss-core packages/contextboss-mcp -q
+      - name: reproducible build + wheel smoke test
+        run: |
+          python -m build packages/contextboss-core
+          python -m build packages/contextboss-mcp
+          pip install --force-reinstall --no-deps packages/contextboss-core/dist/*.whl
+          python -c "import contextboss; print(contextboss.__version__)"

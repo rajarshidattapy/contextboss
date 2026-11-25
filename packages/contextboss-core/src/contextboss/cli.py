@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from .demo import build
-from .types import AssembledContext, Tier
+from .types import AssembledContext
 
 RESET, BOLD, DIM = "\033[0m", "\033[1m", "\033[2m"
 COLORS = {
@@ -39,7 +39,7 @@ def report(ctx: AssembledContext, color: bool) -> str:
     return "\n".join(out)
 
 
-def main(argv=None) -> int:
+def demo_main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="contextboss", description="Context Assembler demo.")
     p.add_argument("--budget", type=int, default=680, help="total token budget (default 900)")
     p.add_argument("--reserve", type=int, default=256, help="tokens reserved for the model's reply")
@@ -52,6 +52,29 @@ def main(argv=None) -> int:
     if a.show:
         print("\n" + "─" * 60 + "\n" + ctx.render())
     return 0
+
+
+_SUBCOMMANDS = {
+    "add", "search", "get", "update", "delete", "compact", "assemble",
+    "inspect", "stats", "list", "export", "import", "serve", "demo",
+}
+
+
+def main(argv=None) -> int:
+    """Dispatch: management subcommands go to commands.run, everything else is the demo."""
+    import sys as _sys
+
+    argv = list(_sys.argv[1:] if argv is None else argv)
+    if any(a in _SUBCOMMANDS for a in argv):
+        from .commands import run
+
+        return run(argv)
+    if argv and argv[0] in ("-h", "--help"):
+        from .commands import build_parser
+
+        build_parser().print_help()
+        return 0
+    return demo_main(argv)
 
 
 if __name__ == "__main__":

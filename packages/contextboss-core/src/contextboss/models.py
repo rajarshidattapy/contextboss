@@ -4,7 +4,7 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 
 def _now() -> float:
@@ -20,7 +20,7 @@ class ContextEntry:
 
     content: str
     namespace: str = "default"
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     provenance: str = ""  # where this came from: tool name, file, url, session id...
     tier: str = "memory"
     pinned: bool = False
@@ -30,9 +30,9 @@ class ContextEntry:
     created_at: float = field(default_factory=_now)
     updated_at: float = field(default_factory=_now)
     tokens: int = 0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "content": self.content,

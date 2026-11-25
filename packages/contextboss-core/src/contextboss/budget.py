@@ -7,7 +7,6 @@ tools by weight, capped per tier, and unused share flows to tiers that still wan
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict
 
 from .types import Tier
 
@@ -17,15 +16,15 @@ DYNAMIC_TIERS = (Tier.MEMORY, Tier.RETRIEVAL, Tier.TOOLS)
 @dataclass
 class BudgetPolicy:
     # Guaranteed share of the flexible pool, per tier. Must sum to ~1.
-    weights: Dict[Tier, float] = field(
+    weights: dict[Tier, float] = field(
         default_factory=lambda: {Tier.MEMORY: 0.30, Tier.RETRIEVAL: 0.50, Tier.TOOLS: 0.20}
     )
     # Hard ceiling per tier, as a fraction of the flexible pool.
-    caps: Dict[Tier, float] = field(
+    caps: dict[Tier, float] = field(
         default_factory=lambda: {Tier.MEMORY: 0.50, Tier.RETRIEVAL: 0.75, Tier.TOOLS: 0.35}
     )
 
-    def allocate(self, pool: int, demand: Dict[Tier, int]) -> Dict[Tier, int]:
+    def allocate(self, pool: int, demand: dict[Tier, int]) -> dict[Tier, int]:
         """Split `pool` tokens across dynamic tiers given each tier's demand."""
         alloc = {t: 0 for t in DYNAMIC_TIERS}
         ceiling = {t: int(pool * self.caps[t]) for t in DYNAMIC_TIERS}

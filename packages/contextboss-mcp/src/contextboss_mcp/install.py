@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from typing import Any, Dict
+from typing import Any
 
 BEGIN = "# >>> contextboss >>>"
 END = "# <<< contextboss <<<"
@@ -33,7 +33,7 @@ def install_claude_code(print_only: bool = False) -> str:
     path = _claude_settings_path()
     try:
         with open(path) as fh:
-            settings: Dict[str, Any] = json.load(fh)
+            settings: dict[str, Any] = json.load(fh)
     except (OSError, json.JSONDecodeError):
         settings = {}
 
@@ -42,7 +42,7 @@ def install_claude_code(print_only: bool = False) -> str:
 
     hooks = settings.setdefault("hooks", {})
 
-    def _hook(command: str) -> Dict[str, Any]:
+    def _hook(command: str) -> dict[str, Any]:
         return {"hooks": [{"type": "command", "command": command}]}
 
     def _merge(event: str, command: str) -> None:

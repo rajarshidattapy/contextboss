@@ -5,8 +5,10 @@ compress it, delete it for real, and assemble a window-safe prompt from it.
 """
 from __future__ import annotations
 
+import builtins
 import os
-from typing import Any, Dict, List, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Any
 
 from .assembler import ContextAssembler
 from .models import ContextEntry
@@ -28,10 +30,10 @@ class ContextManager:
 
     def __init__(
         self,
-        backend: Union[StorageBackend, str, None] = None,
+        backend: StorageBackend | str | None = None,
         *,
-        tokenizer: Optional[Tokenizer] = None,
-        summarizer: Optional[Summarizer] = None,
+        tokenizer: Tokenizer | None = None,
+        summarizer: Summarizer | None = None,
         budget: int = 8000,
         output_reserve: int = 1000,
     ) -> None:
@@ -52,12 +54,12 @@ class ContextManager:
         content: str,
         *,
         namespace: str = "default",
-        tags: Optional[Sequence[str]] = None,
+        tags: Sequence[str] | None = None,
         provenance: str = "",
         tier: str = "memory",
         pinned: bool = False,
         importance: float = 1.0,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> ContextEntry:
         if tier not in _VALID_TIERS:
             raise ValueError(f"tier must be one of {sorted(_VALID_TIERS)}, got {tier!r}")
@@ -74,21 +76,21 @@ class ContextManager:
         )
         return self.store.add(entry)
 
-    def get(self, entry_id: str) -> Optional[ContextEntry]:
+    def get(self, entry_id: str) -> ContextEntry | None:
         return self.store.get(entry_id)
 
     def update(
         self,
         entry_id: str,
-        content: Optional[str] = None,
+        content: str | None = None,
         *,
-        namespace: Optional[str] = None,
-        tags: Optional[Sequence[str]] = None,
-        provenance: Optional[str] = None,
-        tier: Optional[str] = None,
-        pinned: Optional[bool] = None,
-        importance: Optional[float] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        namespace: str | None = None,
+        tags: Sequence[str] | None = None,
+        provenance: str | None = None,
+        tier: str | None = None,
+        pinned: bool | None = None,
+        importance: float | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> ContextEntry:
         entry = self.store.get(entry_id)
         if entry is None:
@@ -114,6 +116,30 @@ class ContextManager:
         entry.tokens = self.tokenizer.count(entry.content)
         return self.store.update(entry)
 
+    def restore(self, data: dict[str, Any]) -> ContextEntry:
+        """Re-add an exported entry, preserving id and timestamps (export/import,
+        sync). Entries whose id already exists are left untouched."""
+        existing = self.store.get(str(data.get("id", "")))
+        if existing is not None:
+            return existing
+        entry = ContextEntry(
+            id=str(data.get("id") or ContextEntry(content="").id),
+            content=str(data["content"]),
+            namespace=str(data.get("namespace", "default")),
+            tags=list(data.get("tags") or []),
+            provenance=str(data.get("provenance", "")),
+            tier=str(data.get("tier", "memory")),
+            pinned=bool(data.get("pinned", False)),
+            importance=float(data.get("importance", 1.0)),
+            created_at=float(data.get("created_at") or 0),
+            updated_at=float(data.get("updated_at") or 0),
+            tokens=int(data.get("tokens") or self.tokenizer.count(str(data["content"]))),
+            metadata=dict(data.get("metadata") or {}),
+        )
+        if entry.tier not in _VALID_TIERS:
+            raise ValueError(f"tier must be one of {sorted(_VALID_TIERS)}, got {entry.tier!r}")
+        return self.store.add(entry)
+
     def delete(self, entry_id: str) -> bool:
         """Hard delete: the entry, its search index rows and its version history."""
         return self.store.delete(entry_id)
@@ -122,23 +148,23 @@ class ContextManager:
         self,
         query: str = "",
         *,
-        namespace: Optional[str] = None,
-        tags: Optional[Sequence[str]] = None,
+        namespace: str | None = None,
+        tags: Sequence[str] | None = None,
         limit: int = 10,
-    ) -> List[ContextEntry]:
+    ) -> builtins.list[ContextEntry]:
         return self.store.search(query, namespace=namespace, tags=tags, limit=limit)
 
     def list(
         self,
         *,
-        namespace: Optional[str] = None,
-        tags: Optional[Sequence[str]] = None,
+        namespace: str | None = None,
+        tags: Sequence[str] | None = None,
         limit: int = 1000,
-    ) -> List[ContextEntry]:
+    ) -> builtins.list[ContextEntry]:
         return self.store.list(namespace=namespace, tags=tags, limit=limit)
 
     # -- compression ---------------------------------------------------------
-    def compact(self, entry_id: str, target_tokens: Optional[int] = None) -> ContextEntry:
+    def compact(self, entry_id: str, target_tokens: int | None = None) -> ContextEntry:
         """Shrink an entry in place with the summarizer. Keeps version history."""
         entry = self.store.get(entry_id)
         if entry is None:
@@ -156,12 +182,12 @@ class ContextManager:
         self,
         query: str = "",
         *,
-        system: Optional[str] = None,
-        task: Optional[str] = None,
-        tools: Optional[Sequence[ToolSpec]] = None,
-        namespace: Optional[str] = None,
-        budget: Optional[int] = None,
-        output_reserve: Optional[int] = None,
+        system: str | None = None,
+        task: str | None = None,
+        tools: Sequence[ToolSpec] | None = None,
+        namespace: str | None = None,
+        budget: int | None = None,
+        output_reserve: int | None = None,
         k: int = 50,
     ) -> AssembledContext:
         """Build a window-safe context from stored entries.
@@ -204,7 +230,7 @@ class ContextManager:
         return asm.assemble()
 
     # -- introspection ---------------------------------------------------------
-    def inspect(self, entry_id: str) -> Dict[str, Any]:
+    def inspect(self, entry_id: str) -> dict[str, Any]:
         entry = self.store.get(entry_id)
         if entry is None:
             raise KeyError(f"no such entry: {entry_id}")
@@ -213,16 +239,16 @@ class ContextManager:
             "versions": self.store.list_versions(entry_id),
         }
 
-    def get_version(self, entry_id: str, version: int) -> Optional[ContextEntry]:
+    def get_version(self, entry_id: str, version: int) -> ContextEntry | None:
         return self.store.get_version(entry_id, version)
 
-    def stats(self, *, namespace: Optional[str] = None) -> Dict[str, Any]:
+    def stats(self, *, namespace: str | None = None) -> dict[str, Any]:
         return self.store.stats(namespace=namespace)
 
     def close(self) -> None:
         self.store.close()
 
-    def __enter__(self) -> "ContextManager":
+    def __enter__(self) -> ContextManager:
         return self
 
     def __exit__(self, *exc: Any) -> None:

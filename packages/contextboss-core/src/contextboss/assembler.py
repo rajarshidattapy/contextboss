@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 from .budget import DYNAMIC_TIERS, BudgetPolicy
 from .memory import MemoryStore
 from .retrieval import Retriever
@@ -38,9 +36,9 @@ class ContextAssembler:
         self,
         budget: int = 8000,
         output_reserve: int = 1000,
-        tokenizer: Optional[Tokenizer] = None,
-        policy: Optional[BudgetPolicy] = None,
-        summarizer: Optional[Summarizer] = None,
+        tokenizer: Tokenizer | None = None,
+        policy: BudgetPolicy | None = None,
+        summarizer: Summarizer | None = None,
         min_summary_tokens: int = 40,
     ) -> None:
         if output_reserve >= budget:
@@ -51,8 +49,8 @@ class ContextAssembler:
         self.policy = policy or BudgetPolicy()
         self.summarizer = summarizer or extractive_summary(self.tokenizer)
         self.min_summary_tokens = min_summary_tokens
-        self._items: List[ContextItem] = []
-        self._previews: Dict[str, str] = {}
+        self._items: list[ContextItem] = []
+        self._previews: dict[str, str] = {}
 
     # ---- building the candidate set -------------------------------------
     def add(self, item: ContextItem) -> ContextItem:
@@ -65,7 +63,7 @@ class ContextAssembler:
     def task(self, text: str) -> ContextItem:
         return self.add(ContextItem(Tier.TASK, text, id="task"))
 
-    def memory(self, text: str, priority: float = 1.0, compact: Optional[str] = None) -> ContextItem:
+    def memory(self, text: str, priority: float = 1.0, compact: str | None = None) -> ContextItem:
         return self.add(ContextItem(Tier.MEMORY, text, priority, compact=compact))
 
     def retrieve(self, text: str, priority: float = 1.0, source: str = "") -> ContextItem:
@@ -91,8 +89,8 @@ class ContextAssembler:
     # ---- assembly ---------------------------------------------------------
     def assemble(self) -> AssembledContext:
         window = self.budget - self.output_reserve
-        decisions: List[Decision] = []
-        chosen: List[ContextItem] = []
+        decisions: list[Decision] = []
+        chosen: list[ContextItem] = []
 
         items = [self._copy(i) for i in self._items]
         for it in items:
@@ -127,7 +125,7 @@ class ContextAssembler:
         pool = max(0, task_room)
 
         # 2. split the pool
-        by_tier: Dict[Tier, List[ContextItem]] = {t: [] for t in DYNAMIC_TIERS}
+        by_tier: dict[Tier, list[ContextItem]] = {t: [] for t in DYNAMIC_TIERS}
         for i in items:
             if i.tier in by_tier:
                 by_tier[i.tier].append(i)
@@ -135,8 +133,8 @@ class ContextAssembler:
         alloc = self.policy.allocate(pool, demand)
 
         # 3. fill each tier
-        used: Dict[Tier, int] = {t: 0 for t in DYNAMIC_TIERS}
-        leftovers: List[ContextItem] = []
+        used: dict[Tier, int] = {t: 0 for t in DYNAMIC_TIERS}
+        leftovers: list[ContextItem] = []
         for tier in DYNAMIC_TIERS:
             room = alloc[tier]
             for it in sorted(by_tier[tier], key=lambda x: -x.priority):
@@ -172,7 +170,7 @@ class ContextAssembler:
         return AssembledContext(chosen, decisions, usage, self.budget, self.output_reserve)
 
     # ---- internals --------------------------------------------------------
-    def _place(self, it: ContextItem, tier: Tier, room: int, decisions: List[Decision]):
+    def _place(self, it: ContextItem, tier: Tier, room: int, decisions: list[Decision]):
         """Try full, compact, summary, drop. Returns (room_left, kept)."""
         if it.tokens <= room:
             decisions.append(self._d(it.id, tier, "included", it.tokens, f"fits tier budget ({room} left)"))

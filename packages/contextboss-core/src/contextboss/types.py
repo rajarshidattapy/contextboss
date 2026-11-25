@@ -4,8 +4,7 @@ import itertools
 import json
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 _COUNTER = itertools.count(1)
 
@@ -33,8 +32,8 @@ class ContextItem:
     priority: float = 1.0  # relevance within its tier, higher wins
     id: str = ""
     # Cheaper stand-in used when the full item doesn't fit. Optional.
-    compact: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    compact: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
     tokens: int = 0  # filled in by the assembler
 
     def __post_init__(self) -> None:
@@ -48,7 +47,7 @@ class ToolSpec:
 
     name: str
     description: str
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    parameters: dict[str, Any] = field(default_factory=dict)
     priority: float = 1.0
 
     def full(self) -> str:
@@ -80,9 +79,9 @@ class TierUsage:
 
 @dataclass
 class AssembledContext:
-    messages: List[ContextItem]
-    decisions: List[Decision]
-    usage: List[TierUsage]
+    messages: list[ContextItem]
+    decisions: list[Decision]
+    usage: list[TierUsage]
     budget: int
     output_reserve: int
 
@@ -97,5 +96,5 @@ class AssembledContext:
     def render(self, sep: str = "\n\n") -> str:
         return sep.join(m.content for m in self.messages)
 
-    def dropped(self) -> List[Decision]:
+    def dropped(self) -> list[Decision]:
         return [d for d in self.decisions if d.action == "dropped"]

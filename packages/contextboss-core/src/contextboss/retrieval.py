@@ -5,7 +5,6 @@ import math
 import re
 from collections import Counter
 from dataclasses import dataclass
-from typing import List, Tuple
 
 _WORD = re.compile(r"[a-z0-9]+")
 
@@ -18,8 +17,8 @@ class Chunk:
 
 class Retriever:
     def __init__(self) -> None:
-        self._chunks: List[Chunk] = []
-        self._tf: List[Counter] = []
+        self._chunks: list[Chunk] = []
+        self._tf: list[Counter] = []
         self._df: Counter = Counter()
 
     def index(self, source: str, text: str) -> None:
@@ -32,11 +31,11 @@ class Retriever:
             self._tf.append(tf)
             self._df.update(tf.keys())
 
-    def search(self, query: str, k: int = 10) -> List[Tuple[Chunk, float]]:
+    def search(self, query: str, k: int = 10) -> list[tuple[Chunk, float]]:
         n = len(self._chunks) or 1
         q = _WORD.findall(query.lower())
         out = []
-        for chunk, tf in zip(self._chunks, self._tf):
+        for chunk, tf in zip(self._chunks, self._tf, strict=True):
             length = sum(tf.values()) or 1
             score = sum(
                 (tf[t] / length) * math.log(1 + n / (1 + self._df[t])) for t in q if t in tf

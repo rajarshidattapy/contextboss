@@ -2,7 +2,6 @@
 import threading
 
 import pytest
-
 from contextboss import ContextEntry, InMemoryBackend, SQLiteBackend
 
 

@@ -1,8 +1,13 @@
 import pytest
-
 from contextboss import (
-    BudgetPolicy, ContextAssembler, ContextOverflowError, HeuristicTokenizer, MemoryStore,
-    Retriever, Tier, ToolSpec,
+    BudgetPolicy,
+    ContextAssembler,
+    ContextOverflowError,
+    HeuristicTokenizer,
+    MemoryStore,
+    Retriever,
+    Tier,
+    ToolSpec,
 )
 from contextboss.demo import build
 

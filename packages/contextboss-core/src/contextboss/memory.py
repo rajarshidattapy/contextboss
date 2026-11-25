@@ -1,10 +1,8 @@
 """A tiny in-process memory store. Swap for a vector DB; keep the interface."""
 from __future__ import annotations
 
-import math
 import re
 from dataclasses import dataclass
-from typing import List, Tuple
 
 _WORD = re.compile(r"[a-z0-9]+")
 
@@ -24,7 +22,7 @@ class MemoryStore:
     """Scores by keyword overlap x importance x recency decay."""
 
     def __init__(self, half_life: int = 20) -> None:
-        self._items: List[Memory] = []
+        self._items: list[Memory] = []
         self.half_life = half_life
 
     def add(self, text: str, importance: float = 1.0) -> Memory:
@@ -32,7 +30,7 @@ class MemoryStore:
         self._items.append(m)
         return m
 
-    def recall(self, query: str, k: int = 10) -> List[Tuple[Memory, float]]:
+    def recall(self, query: str, k: int = 10) -> list[tuple[Memory, float]]:
         q = _terms(query)
         now = len(self._items)
         scored = []

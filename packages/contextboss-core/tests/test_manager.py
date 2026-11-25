@@ -2,8 +2,7 @@
 import random
 
 import pytest
-
-from contextboss import ContextManager, SQLiteBackend, Tier
+from contextboss import ContextManager
 
 
 @pytest.fixture
@@ -62,7 +61,7 @@ class TestAssemble:
         for trial in range(30):
             m = ContextManager(budget=rng.randint(200, 4000),
                                output_reserve=rng.randint(50, 199))
-            for i in range(rng.randint(1, 40)):
+            for _ in range(rng.randint(1, 40)):
                 m.add("lorem ipsum dolor sit amet " * rng.randint(1, 60),
                       importance=rng.uniform(0.1, 3.0),
                       pinned=rng.random() < 0.1,
@@ -73,7 +72,7 @@ class TestAssemble:
 
     def test_pinned_entries_survive_tight_budgets(self, mgr):
         mgr.add("filler " * 500)
-        p = mgr.add("the critical fact", pinned=True)
+        mgr.add("the critical fact", pinned=True)
         ctx = mgr.assemble("", budget=800, output_reserve=100)
         assert "the critical fact" in ctx.render()
 
