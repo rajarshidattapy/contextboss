@@ -42,6 +42,7 @@ def test_all_nine_tools(tmp_path):
                     "context_add", "context_search", "context_get", "context_update",
                     "context_delete", "context_compact", "context_assemble",
                     "context_inspect", "context_stats",
+                    "search", "fetch",  # ChatGPT connector-style aliases
                 }
 
                 added = await call(

@@ -177,6 +177,15 @@ def context_stats(namespace: str | None = None) -> str:
 def main() -> None:
     import sys
 
+    if len(sys.argv) > 1 and sys.argv[1] == "serve" and "--http" in sys.argv:
+        port = 8787
+        host = "127.0.0.1"
+        if "--port" in sys.argv:
+            port = int(sys.argv[sys.argv.index("--port") + 1])
+        if "--host" in sys.argv:
+            host = sys.argv[sys.argv.index("--host") + 1]
+        http_main(host, port)
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "install":
         sys.argv = [sys.argv[0]] + sys.argv[1:]
         from .install import main as install_main
@@ -188,3 +197,90 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# -- ChatGPT connector-style aliases (deep research expects search/fetch) -------
+
+@mcp.tool()
+def search(query: str) -> str:
+    """ChatGPT connector-style search: returns {"results": [{id, title, text, url}]}.
+    Thin alias over context_search for custom MCP apps that require it."""
+    entries = get_manager().search(query, limit=10)
+    return json.dumps({
+        "results": [
+            {
+                "id": e.id,
+                "title": e.content[:60],
+                "text": e.content[:400],
+                "url": f"contextboss://entries/{e.id}",
+            }
+            for e in entries
+        ]
+    })
+
+
+@mcp.tool()
+def fetch(id: str) -> str:
+    """ChatGPT connector-style fetch: returns the full entry for an id from search."""
+    e = get_manager().get(id)
+    if e is None:
+        return json.dumps({"error": f"no such entry: {id}"})
+    return json.dumps({
+        "id": e.id,
+        "title": e.content[:60],
+        "text": e.content,
+        "url": f"contextboss://entries/{e.id}",
+        "metadata": {"namespace": e.namespace, "tags": e.tags, "version": e.version},
+    })
+
+
+def create_http_app():
+    """Streamable-HTTP ASGI app with optional bearer auth.
+
+    Deploy behind HTTPS for Claude Web / ChatGPT custom connectors. When
+    CONTEXTBOSS_API_KEYS is set, every request needs Authorization: Bearer <key>.
+    """
+    import hashlib
+    import secrets as _secrets
+
+    raw = os.environ.get("CONTEXTBOSS_API_KEYS", "")
+    key_hashes = {
+        hashlib.sha256(k.strip().encode()).hexdigest() for k in raw.split(",") if k.strip()
+    }
+
+    # Fresh server instance per app: StreamableHTTPSessionManager.run() is
+    # single-use, so reusing the module-level `mcp` breaks a second app in the
+    # same process (tests, embedders). Tool objects are shareable.
+    clone = FastMCP("contextboss")
+    clone._tool_manager._tools = dict(mcp._tool_manager._tools)  # mcp 1.x API
+    app = clone.streamable_http_app()
+
+    if not key_hashes:
+        return app
+
+    class BearerAuth:
+        def __init__(self, inner):
+            self.inner = inner
+
+        async def __call__(self, scope, receive, send):
+            if scope["type"] == "http":
+                headers = dict(scope.get("headers") or [])
+                token = headers.get(b"authorization", b"").decode().removeprefix("Bearer ").strip()
+                digest = hashlib.sha256(token.encode()).hexdigest()
+                if not token or not any(
+                    _secrets.compare_digest(digest, k) for k in key_hashes
+                ):
+                    from starlette.responses import JSONResponse
+
+                    resp = JSONResponse({"error": "unauthorized"}, status_code=401)
+                    await resp(scope, receive, send)
+                    return
+            await self.inner(scope, receive, send)
+
+    return BearerAuth(app)
+
+
+def http_main(host: str = "127.0.0.1", port: int = 8787) -> None:
+    import uvicorn
+
+    uvicorn.run(create_http_app(), host=host, port=port)
